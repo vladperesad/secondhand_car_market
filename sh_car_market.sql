@@ -112,11 +112,11 @@ SELECT
 FROM
 	autos_cleaned
 WHERE
-	LENGTH(date_created) >10 OR LENGTH(date_created) <10;
+	LENGTH(date_created) <>10;
    
 DELETE FROM autos_cleaned
 WHERE
-	LENGTH(date_created) >10 OR LENGTH(date_created) <10;
+	LENGTH(date_created) <>10;
 
 #turn VARCHAR format to DATE
 #create 3 new columns   
@@ -143,6 +143,87 @@ SELECT
 FROM
 	autos_cleaned;
     
+#get rid of the columns with original dates in VARHCAR
+
+ALTER TABLE autos_cleaned
+DROP COLUMN date_created,
+DROP COLUMN date_crawled,
+DROP COLUMN last_seen;
+
+DESCRIBE
+	autos_cleaned;
+ 
+ #last 3 colums are DATE type (check)
+    
+#pull up DISTINCT values in brand column to see if theres any mistakes
+    
+SELECT
+	DISTINCT(brand)
+FROM
+	autos_cleaned;
+
+#do the same with the model column
+    
+SELECT
+	DISTINCT(model)
+FROM
+	autos_cleaned;
+    
+#pull up number of rows with empty values in column model
+
+SELECT
+	COUNT(id)
+FROM
+	autos_cleaned
+WHERE model = "";
+
+#and get rid of them
+
+DELETE FROM autos_cleaned
+WHERE
+	model = "";
+
+#repeat the same steps with vehicle type
+    
+SELECT
+	DISTINCT(vehicle_type)
+FROM
+	autos_cleaned;
+
+SELECT
+	COUNT(id)
+FROM
+	autos_cleaned
+WHERE
+	vehicle_type = "";
+    
+#since the body isn't that important and we have abou 30k rows of missing data im just going to ingnore these missing values,
+#but will translate the body types into English
+
+UPDATE autos_cleaned
+SET vehicle_type = 'compact_car'
+WHERE vehicle_type =  'kleinwagen';
+
+UPDATE autos_cleaned
+SET vehicle_type = 'station_wagon'
+WHERE vehicle_type =  'kombi';
+    
+UPDATE autos_cleaned
+SET vehicle_type = 'other'
+WHERE vehicle_type =  'andere';
+
+#check that the conversion worked out as intended
+SELECT
+	DISTINCT(vehicle_type)
+FROM
+	autos_cleaned;
+
+SELECT
+	*
+FROM
+	autos_cleaned;
+
+
 #-------------------------------------------------
    
    
