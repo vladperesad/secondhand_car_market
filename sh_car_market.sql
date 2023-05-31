@@ -218,221 +218,87 @@ SELECT
 FROM
 	autos_cleaned;
 
+#same with gearbox
 SELECT
-	*
-FROM
-	autos_cleaned;
-
-
-#-------------------------------------------------
-   
-   
-
-#count how many of those there are
-
-SELECT
-	date_created
-FROM
-	autos_cleaned
-WHERE
-	LENGTH(date_created) >10 OR LENGTH(date_created) <10;
-    
-#repeat the same thing with the other two
-
-SELECT
-	date_crawled
-FROM
-	autos_cleaned
-WHERE
-	LENGTH(date_crawled) >10 OR LENGTH(date_crawled) <10;
-    
-#109 rows of probably mispalced values
-    
-SELECT
-	last_seen
-FROM
-	autos_cleaned
-WHERE
-	last_seen IS NULL;
-    
-#all the rows returned although the date seems to have 10 digits
-
-DROP TABLE IF EXISTS test;
-CREATE TEMPORARY TABLE test
-SELECT
-	LTRIM(last_seen) AS last_seen
+	DISTINCT(gearbox)
 FROM
 	autos_cleaned;
     
-SELECT
-	*
-FROM
-	test
-WHERE
-	last_seen_2 IS NULL;
-    
-ALTER TABLE test
-ADD COLUMN last_seen_2 DATE AFTER last_seen;
+UPDATE autos_cleaned
+SET gearbox = 'automatic'
+WHERE gearbox = 'automatik';
 
-UPDATE test
-SET last_seen_2 = CAST(last_seen AS DATE);
+UPDATE autos_cleaned
+SET gearbox = 'manual'
+WHERE gearbox = 'manuell';
 
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-# create a working copy of a table and use TRIM() to get rid of extra spaces seen in excel    
-DROP TABLE IF EXISTS autos_cleaned;    
-CREATE TABLE autos_cleaned
-SELECT
-TRIM(id) AS id,
-TRIM(dateCrawled) AS date_crawled,
-TRIM(v_name) AS vehicle,
-TRIM(seller) AS seller,
-TRIM(price) AS price,
-TRIM(vehicleType) AS vehicle_type,
-TRIM(yearOfRegistration) AS year_of_reg,
-TRIM(gearbox) AS transmission,
-TRIM(powerPS) AS power,
-TRIM(model) AS model,
-TRIM(kilometer) AS kilometrage,
-TRIM(monthOfRegistration) AS month_of_reg,
-TRIM(fuelType) AS fuel_type,
-TRIM(brand) AS brand,
-TRIM(notRepairedDamage) AS present_damage,
-TRIM(dateCreated) AS date_created,
-TRIM(lastSeen) AS last_seen
-FROM
-	autos;
-    
-# run a query to check that the table was created properly
-SELECT
-	*
-FROM
-	autos_cleaned;
-#compare COUNT() of ids and COUNT() of UNIQUE ids to see if theres duplicates    
-SELECT
-	COUNT(id)
-FROM
-	autos_cleaned;
+#take a look at the horsepower values
+#in order to do that we need first to turn strings into numerical values
 
-SELECT
-	COUNT(DISTINCT(id))
-FROM
-	autos_cleaned;
-    
-#numbers are equal -> no duplicates;
-
-#take a look at the dates all three columns have 3 different MAX lengths 
-SELECT
-    MAX(LENGTH(date_crawled)),
-    MIN(LENGTH(date_crawled)),
-    MAX(LENGTH(date_created)),
-    MIN(LENGTH(date_created)),
-    MAX(LENGTH(last_seen)),
-    MIN(LENGTH(last_seen))
-FROM
-	autos_cleaned;
-#let's pull em up
-
-SELECT
-	MAX(date_crawled),
-    MAX(date_created),
-    MAX(last_seen)
-FROM
-	autos_cleaned;
-
-# turns out there are values present that should not be in this column    
-
-#try and count how many rows content values that are not dates
-SELECT
-	COUNT(date_crawled)
-FROM
-	autos_cleaned
-WHERE
-	LENGTH(date_crawled) <15;
-#3 for `date_crawled`
-
-SELECT
-	COUNT(date_created)
-FROM
-	autos_cleaned
-WHERE
-	LENGTH(date_created) <15;
-#most likely there are the same 3 rows
-
-SELECT
-	COUNT(last_seen)
-FROM
-	autos_cleaned
-WHERE
-	LENGTH(last_seen) <15;
-    
-#let's get rid of these rows using DELETE() statement
-
-DELETE FROM autos_cleaned
-WHERE LENGTH(date_crawled) <15 OR LENGTH(date_created) <15 OR LENGTH(last_seen) <15;
-
-#rerun the MIN() MAX() query to see if it is more consistent now
- SELECT
-    MAX(LENGTH(date_crawled)),
-    MIN(LENGTH(date_crawled)),
-    MAX(LENGTH(date_created)),
-    MIN(LENGTH(date_created)),
-    MAX(LENGTH(last_seen)),
-    MIN(LENGTH(last_seen))
-FROM
-	autos_cleaned;
-
-#as we don't need time, we can simply remove it and turn the string into a DATE type 
-
-#first add a few columns to the table
 ALTER TABLE autos_cleaned
-ADD COLUMN date_crawled_2 DATE AFTER date_crawled,
-ADD COLUMN date_created_2 DATE AFTER date_created,
-ADD COLUMN last_seen_2 DATE AFTER last_seen;
-
-UPDATE autos_cleaned
-SET date_crawled_2 = CAST(date_crawled AS DATE);
-
-UPDATE autos_cleaned
-SET date_created_2 = CAST(date_created AS DATE);
-
-UPDATE autos_cleaned
-SET last_seen_2 = STR_TO_DATE(last_seen, '%Y-%m-%d %k:%i');
+MODIFY power INT;
 
 SELECT
-	last_seen
-FROM
-	autos_cleaned
-WHERE
-	last_seen is null;
-
-SELECT
-	date_crawled
-FROM
-	autos_cleaned
-WHERE 
-	date_crawled IS NULL;
-    
-SELECT
-	dateCrawled
-FROM
-	autos
-WHERE
-	dateCrawled IS NULL;
-
-
-
-
-SELECT
-	CAST(date_crawled AS DATE),
-    date_crawled
+	MAX(power),
+    MIN(power)
 FROM
 	autos_cleaned;
+    
+#clearly it is highly inlikely that there is a civillian car that outputs 20000 BHP
+#600 is the average maximum that civilian cars are capable of, so lets take a look of what vehicles are represented in the group 600+
+
+SELECT
+	*
+FROM
+	autos_cleaned
+WHERE
+	power > 600
+ORDER BY 
+	power;
+    
+# while Audi RS6 is definitely capable of producing 750 hp, fiat brava with 1.6 is definitely not
+# i am going to filter out records that have horsepower of above 600 hp AND brands that are not popular with producng high performance cars
+# such as ('volkswagen''skoda''peugeot''ford''renault''opel''seat''citroen''fiat''mini''smart'
+#'hyundai''volvo''kia''suzuki''dacia''daihatsu''daewoo''rover''saab''trabant''lada')
+
+
+DELETE FROM
+	autos_cleaned
+WHERE
+	power > 400 AND
+    brand IN ('skoda','peugeot','renault','opel','seat','citroen','fiat','mini','smart',
+'hyundai','volvo','kia','suzuki','dacia','daihatsu','daewoo','rover','saab','trabant','lada')
+ORDER BY brand;
+
+
+#the rest of the cars can be filtered out with the horsepower treshold of 850 horsepower
+
+DELETE FROM
+	autos_cleaned
+WHERE
+	power >850;
+    
+# lets make 10hp a bottom treshhold for cars and filter out everything thats lower than that
+DELETE FROM
+	autos_cleaned
+WHERE
+	power <10;
+    
+# let's turn columns id, price, mileage to INT type as well   
+
+ALTER TABLE autos_cleaned
+MODIFY id INT,
+MODIFY price INT,
+MODIFY mileage INT;
+
+SELECT
+	MAX(price),
+    MIN(price)
+FROM
+	autos_cleaned;
+    
+	
+
+
+
+#---
