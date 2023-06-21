@@ -2,21 +2,35 @@ library(tidyverse)
 library(tidytext)
 
 #Load up the csv file
-
 autos <- read.csv("autos.csv")
+
+#and file that contains brand names
+auto_brands <- read.csv("auto_brands.csv")
+
 
 #there are a few model names that don't tell much about the car, 
 #e.g. 'andere', '3er' or simply missing values 
 #I can try and use `names` column to derive more legible model names
 
+#get rid of hyphens in some names e.g lorraine-dietrich 
+#insert the new values into  field brand_new
+
+auto_brands$brand_new <- gsub("-"," ",auto_brands$Brand)
+
+#use unnest tokens to place every word in its own row
+auto_brands<- auto_brands %>% 
+  unnest_tokens(output = brand_word,
+                input = brand_new)
+
 #create a list of brand names
-brands <- unique(autos$brand)
+brands <- auto_brands$brand_word
 
 #add a few possible ways to spell some brands
-brands <- c("vw","mercedes","benz","mercedesbenz","mercedes-benz", brands)
+brands <- c("vw",
+            "moskvich",
+            "luaz",
+            brands)
 
-#take a look at the vector created
-brands
 
 #create a list of models that are not particularly clear or unknown
 unique(autos$model)
@@ -73,7 +87,6 @@ autos_subset<- autos_subset %>%
   filter(!names_word %in% brands)
 
 
-
 #by the way the names are written there is usually a brand name and then the second 
 #word is a model name e.g. Skoda Fabia or Subaru Impreza 
 #now that we have column without brand names we can pull first word that would be a model name  
@@ -108,7 +121,8 @@ autos<-mercedes %>%
   select(-model.1)
 
 #theres also a brand named "sonstige_autos" that in fact isn't a brand,
-#but rather a sign that the car is most likely made outside of Germany
+#but rather a sign that the car is most likely made outside of Germany 
+#or belongs to an old/not well known manufacturer
 #let's create a subset that has "sonstige_autos" in the brand column 
 
 sonstige<- autos %>% 
@@ -155,6 +169,19 @@ autos<-sonstige %>%
   full_join(autos, by = "index", suffix = c('','.1')) %>% 
   mutate(brand = coalesce(brand, brand.1), model = coalesce(model, model.1)) %>% 
   select(-brand.1,-model.1)
+
+
+#let's look at the values in the brand column, it can be eaasily seen 
+#that unfortunately there are quite a lot of words that were used in the name 
+#column but don't make much sense e.g freisprecheinrichtung or gaaaaanz
+#so i am going to utilize `brand` vector once again to make sure only rows with 
+#legit brand names are present
+
+unique(autos$brand)
+
+autos <- autos %>% 
+  filter(brand %in% brands)
+
 
 #while we're at it I can also clean up the dates and bring them into more 
 #appropriate format YYYY-MM-DD and get rid of the times as they're not that important
