@@ -1,42 +1,44 @@
 SHOW DATABASES;
-CREATE DATABASE excel_proj;
-USE excel_proj;
+CREATE DATABASE secondhand_car_market;
+USE secondhand_car_market;
 
-#create an empty table with the following schema
-DROP TABLE IF EXISTS autos;
-CREATE TABLE autos(
-id VARCHAR(225),	
-dateCrawled VARCHAR(225),	
-v_name VARCHAR(225),
-seller VARCHAR(225),
-offerType VARCHAR(225),
-price VARCHAR(225),
-abtest VARCHAR(225),
-vehicleType VARCHAR(225),
-yearOfRegistration VARCHAR(225),
-gearbox VARCHAR(225),
-powerPS VARCHAR(225),
-model VARCHAR(225),
-kilometer VARCHAR(225),
-monthOfRegistration VARCHAR(225),
-fuelType VARCHAR(225),
-brand VARCHAR(225),
-notRepairedDamage VARCHAR(225),
-dateCreated VARCHAR(225),
-nrOfPictures VARCHAR(225),
-postalCode VARCHAR(225),
-lastSeen VARCHAR(225));
+
+DROP TABLE IF EXISTS autos_cleaned_r;
+CREATE TABLE autos_cleaned_r(
+id INT,
+brand VARCHAR (225),
+model VARCHAR (225),
+vehicle_name VARCHAR (225),
+seller VARCHAR (225),
+offerType VARCHAR (225),
+price INT,
+abtest VARCHAR (225),
+vehicleType VARCHAR (225),
+yearOfRegistration INT,
+gearbox VARCHAR (225),
+powerPS INT,
+kilometer INT,
+monthOfRegistration INT,
+fuelType VARCHAR (225),
+notRepairedDamage VARCHAR (225),
+nrOfPictures INT,
+postalCode INT,
+dateCrawlednew DATE,
+dateCreatednew DATE,
+lastSeennew DATE);
+
 
 # and import it
 SHOW TABLES;
-LOAD DATA LOCAL INFILE "C:/vladperesad/excel_project/used_cars/autos_w.csv"
-INTO TABLE autos
+LOAD DATA LOCAL INFILE "C:/vladperesad/excel_project/used_cars/autos_cleaned_r.csv"
+INTO TABLE autos_cleaned_r
 FIELDS TERMINATED BY ','
 LINES TERMINATED BY '\n'
 IGNORE 1 ROWS 
 (id,
-dateCrawled,
-v_name,
+brand,
+model,
+vehicle_name,
 seller,
 offerType,
 price,
@@ -45,16 +47,15 @@ vehicleType,
 yearOfRegistration,
 gearbox,
 powerPS,
-model,
 kilometer,
 monthOfRegistration,
 fuelType,
-brand,
 notRepairedDamage,
-dateCreated,
 nrOfPictures,
 postalCode,
-lastSeen);
+dateCrawlednew,
+dateCreatednew,
+lastSeennew);
 
 SET GLOBAL local_infile=1;
 SHOW GLOBAL VARIABLES LIKE 'local_infile';
@@ -65,32 +66,36 @@ DESCRIBE autos;
 SELECT
 	*
 FROM
-	autos;
-    
+	autos_cleaned_r;
+        
 #create a working copy of the table that contains only columns that are needed for the analysis
 
-DROP TABLE IF EXISTS autos_cleaned;
-CREATE TABLE autos_cleaned
+DROP TABLE IF EXISTS autos_work;
+CREATE TABLE autos_work
 SELECT
-	(id),
+	id,
     brand,
     model,
-    v_name AS vehicle_name,
+    vehicle_name,
     vehicleType AS vehicle_type,
     gearbox,
-    powerPS AS power,
+    powerPS AS horsepower,
     seller,
     price,
-    fuelType AS fuel,
-    kilometer AS mileage,
-    notRepairedDamage AS damage,
+    fuelType AS fuel_type,
+    kilometer AS kilometrage,
+    notRepairedDamage AS present_damage,
     yearOfRegistration AS reg_year,
     monthOfRegistration AS reg_mon,
-    dateCreated AS date_created,
-    dateCrawled AS date_crawled,
-    lastSeen AS last_seen
+    dateCreatednew AS date_created,
+    dateCrawlednew AS date_crawled,
+    lastSeennew AS last_seen
 FROM
-	autos;
+	autos_cleaned_r
+WHERE
+	brand IS NOT NULL;
+    
+    
    
 #take a look at the data values to make sure they're fine
 
@@ -102,147 +107,101 @@ SELECT
     MAX(LENGTH(last_seen)) AS last_seen_max,
     MIN(LENGTH(last_seen)) AS last_seen_min
 FROM
-	autos_cleaned;
+	autos_work;
     
-    #with given format the date should be YYYY-MM-DD which is 10 digits, anything less or more than that must be wrong
-    #let's take a look
-    
-SELECT
-	date_created
-FROM
-	autos_cleaned
-WHERE
-	LENGTH(date_created) <>10;
-   
-DELETE FROM autos_cleaned
-WHERE
-	LENGTH(date_created) <>10;
+#with given format the date should be YYYY-MM-DD which is 10 digits, anything less or more than that must be wrong
 
-#turn VARCHAR format to DATE
-#create 3 new columns   
-
-ALTER TABLE autos_cleaned
-ADD COLUMN date_crawled_2 DATE AFTER date_crawled,
-ADD COLUMN date_created_2 DATE AFTER date_created,
-ADD COLUMN last_seen_2 DATE AFTER last_seen;
-
-#insert data into them with the new format
-
-UPDATE autos_cleaned
-SET date_crawled_2 = STR_TO_DATE(date_crawled, '%Y-%m-%d');
-
-UPDATE autos_cleaned
-SET date_created_2 = STR_TO_DATE(date_created, '%Y-%m-%d');
-
-UPDATE autos_cleaned
-SET last_seen_2 = STR_TO_DATE(last_seen, '%Y-%m-%d');
-   
-   
-SELECT
-	*
-FROM
-	autos_cleaned;
-    
-#get rid of the columns with original dates in VARHCAR
-
-ALTER TABLE autos_cleaned
-DROP COLUMN date_created,
-DROP COLUMN date_crawled,
-DROP COLUMN last_seen;
-
-DESCRIBE
-	autos_cleaned;
- 
- #last 3 colums are DATE type (check)
-    
 #pull up DISTINCT values in brand column to see if theres any mistakes
-    
+
 SELECT
 	DISTINCT(brand)
 FROM
-	autos_cleaned;
+	autos_work;
 
-#do the same with the model column
+#everything seems to look fine except for shorter way to name volkswagen - vw in some cells  
     
-SELECT
-	DISTINCT(model)
-FROM
-	autos_cleaned;
+UPDATE autos_work
+SET brand = 'volkswagen'
+WHERE brand = 'vw';
     
 #pull up number of rows with empty values in column model
 
 SELECT
 	COUNT(id)
 FROM
-	autos_cleaned
-WHERE model = "";
+	autos_work
+WHERE model = '';
 
 #and get rid of them
 
-DELETE FROM autos_cleaned
+DELETE FROM autos_work
 WHERE
-	model = "";
+	model = '';
 
 #repeat the same steps with vehicle type
     
 SELECT
 	DISTINCT(vehicle_type)
 FROM
-	autos_cleaned;
+	autos_work;
 
 SELECT
 	COUNT(id)
 FROM
-	autos_cleaned
+	autos_work
 WHERE
-	vehicle_type = "";
+	vehicle_type = '' OR vehicle_type IS NULL;
     
-#since the body isn't that important and we have abou 30k rows of missing data im just going to ingnore these missing values,
+#since the body isn't that important and we have about 30k rows of missing data im just going to ingnore these missing values,
 #but will translate the body types into English
 
-UPDATE autos_cleaned
+UPDATE autos_work
 SET vehicle_type = 'compact_car'
 WHERE vehicle_type =  'kleinwagen';
 
-UPDATE autos_cleaned
+UPDATE autos_work
 SET vehicle_type = 'station_wagon'
 WHERE vehicle_type =  'kombi';
     
-UPDATE autos_cleaned
+UPDATE autos_work
 SET vehicle_type = 'other'
 WHERE vehicle_type =  'andere';
 
-#check that the conversion worked out as intended
-SELECT
-	DISTINCT(vehicle_type)
-FROM
-	autos_cleaned;
+UPDATE autos_work
+SET vehicle_type = NULL
+WHERE vehicle_type = '';
 
+DELETE FROM autos_work
+WHERE
+	vehicle_type = '177';
+
+    
 #same with gearbox
 SELECT
 	DISTINCT(gearbox)
 FROM
-	autos_cleaned;
+	autos_work;
     
-UPDATE autos_cleaned
+UPDATE autos_work
 SET gearbox = 'automatic'
 WHERE gearbox = 'automatik';
 
-UPDATE autos_cleaned
+UPDATE autos_work
 SET gearbox = 'manual'
 WHERE gearbox = 'manuell';
+
+UPDATE autos_work
+SET gearbox = NULL
+WHERE gearbox = '';
 
 #take a look at the horsepower values
 #in order to do that we need first to turn strings into numerical values
 
-ALTER TABLE autos_cleaned
-MODIFY power INT;
-
 SELECT
-	MAX(power),
-    MIN(power)
+	MAX(horsepower),
+    MIN(horsepower)
 FROM
-	autos_cleaned;
+	autos_work;
     
 #clearly it is highly inlikely that there is a civillian car that outputs 20000 BHP
 #600 is the average maximum that civilian cars are capable of, so lets take a look of what vehicles are represented in the group 600+
@@ -250,22 +209,22 @@ FROM
 SELECT
 	*
 FROM
-	autos_cleaned
+	autos_work
 WHERE
-	power > 600
+	horsepower > 600
 ORDER BY 
-	power;
+	horsepower;
     
 # while Audi RS6 is definitely capable of producing 750 hp, fiat brava with 1.6 is definitely not
 # i am going to filter out records that have horsepower of above 600 hp AND brands that are not popular with producng high performance cars
-# such as ('volkswagen''skoda''peugeot''ford''renault''opel''seat''citroen''fiat''mini''smart'
-#'hyundai''volvo''kia''suzuki''dacia''daihatsu''daewoo''rover''saab''trabant''lada')
+# such as ('volkswagen','skoda','peugeot','ford','renault','opel','seat','citroen','fiat','mini','smart',
+#'hyundai','volvo','kia','suzuki','dacia','daihatsu','daewoo','rover','saab','trabant','lada')
 
 
 DELETE FROM
-	autos_cleaned
+	autos_work
 WHERE
-	power > 400 AND
+	horsepower> 400 AND
     brand IN ('skoda','peugeot','renault','opel','seat','citroen','fiat','mini','smart',
 'hyundai','volvo','kia','suzuki','dacia','daihatsu','daewoo','rover','saab','trabant','lada')
 ORDER BY brand;
@@ -274,35 +233,26 @@ ORDER BY brand;
 #the rest of the cars can be filtered out with the horsepower treshold of 850 horsepower
 
 DELETE FROM
-	autos_cleaned
+	autos_work
 WHERE
-	power >850;
+	horsepower >850;
     
 # lets make 10hp a bottom treshhold for cars and filter out everything thats lower than that
 DELETE FROM
-	autos_cleaned
+	autos_work
 WHERE
-	power <10;
+	horsepower <10;
     
-# let's turn columns id, price, mileage, reg_year, reg_month to INT type as well   
-
-ALTER TABLE autos_cleaned
-MODIFY id INT,
-MODIFY price INT,
-MODIFY mileage INT,
-MODIFY reg_year INT,
-MODIFY reg_mon INT;
-
 #take a look at the price range
 SELECT
 	MAX(price),
     MIN(price)
 FROM
-	autos_cleaned;
+	autos_work;
     
 # remove records with 0 
 DELETE FROM
-	autos_cleaned
+	autos_work
 WHERE
 	price = 0;
     
@@ -310,14 +260,14 @@ WHERE
     
 
 DELETE FROM
-	autos_cleaned
+	autos_work
 WHERE
 	price > 745000;
     
 SELECT
 	*
 FROM
-	autos_cleaned
+	autos_work
 WHERE
 	price <1000
 ORDER BY price;
@@ -326,41 +276,40 @@ ORDER BY price;
 #get back to the prices when i'm done with the damage column
 
 SELECT
+	DISTINCT(present_damage)
+FROM
+	autos_work;
+    
+SELECT
 	COUNT(id)
 FROM
-	autos_cleaned
+	autos_work
 WHERE
-	damage = "";
+	present_damage = '';
     
-#43383 rows with missing value for damage, but since it is an important information and there is no way 
+#46044 rows with missing value for damage, but since it is an important information and there is no way 
 #i can derive it from other columns, i'll simply have to delete it 
 #prior to that turn ja and nein into true and false
 
+UPDATE autos_work
+SET present_damage = '1'
+WHERE present_damage = 'ja';
 
-UPDATE autos_cleaned
-SET damage = '1'
-WHERE damage = 'TRUE';
-
-UPDATE autos_cleaned
-SET damage = '0'
-WHERE damage = 'FALSE';
+UPDATE autos_work
+SET present_damage = '0'
+WHERE present_damage = 'nein';
  
-UPDATE autos_cleaned
-SET damage = NULL
-WHERE damage = '';
+UPDATE autos_work
+SET present_damage = NULL
+WHERE present_damage = '';
  
-ALTER TABLE autos_cleaned
-MODIFY damage TINYINT(1);
+ALTER TABLE autos_work
+MODIFY present_damage TINYINT(1);
 
-DELETE FROM autos_cleaned
-WHERE damage IS NULL;
-
-SELECT
-	DISTINCT(damage)
-FROM
-	autos_cleaned;
+DELETE FROM autos_work
+WHERE present_damage IS NULL;
     
-#get back to prices
+-------------------------------#get back to prices
 
 DELETE FROM
 	autos_cleaned
@@ -378,7 +327,6 @@ FROM
 UPDATE autos_cleaned
 SET seller = 'private'
 WHERE seller = 'privat';
-
     
 UPDATE autos_cleaned
 SET seller = 'commercial'
@@ -387,26 +335,30 @@ WHERE seller = 'gewerblich';
 #take a look at the fuel coulumn
 
 SELECT
-	DISTINCT(fuel)
+	DISTINCT(fuel_type)
 FROM
 	autos_cleaned;
     
 UPDATE autos_cleaned 
-SET fuel = 'gasoline'
-WHERE fuel = 'benzin';
+SET fuel_type = 'gasoline'
+WHERE fuel_type = 'benzin';
 
 UPDATE autos_cleaned
-SET fuel = 'other'
-WHERE fuel = 'andere';
+SET fuel_type = 'other'
+WHERE fuel_type = 'andere';
 
 UPDATE autos_cleaned
-SET fuel = 'electric'
-WHERE fuel = 'elektro';
+SET fuel_type = 'electric'
+WHERE fuel_type = 'elektro';
+
+UPDATE autos_cleaned
+SET fuel_type = NULL
+WHERE fuel_type = '';
 
 #pull up min and max values in mileage column    
 SELECT
-	MIN(mileage),
-    MAX(mileage)
+	MIN(kilometrage),
+    MAX(kilometrage)
 FROM
 	autos_cleaned;
 #the min and max mileages seem to make sense
@@ -428,7 +380,7 @@ SELECT
 	brand,
     model,
     vehicle_name,
-    power,
+    horsepower,
     reg_year
 FROM
 	autos_cleaned
@@ -437,7 +389,7 @@ WHERE
 ORDER BY reg_year;
 
 #the only car that doesn't fit is a vw beetle with TDI angine that produces 90hp, not only because in 1910
-#there wasn't such a thing as TDI, and hp of 90 was undeard of for 1.9 litre engine but also because first beetle was made in 1965 
+#there wasn't such a thing as TDI, and hp of 90 was unheard of for 1.9 litre engine but also because first wv beetle was made in 1965 
 
 DELETE FROM autos_cleaned
 WHERE reg_year <1923;
@@ -458,13 +410,43 @@ DELETE FROM
 WHERE
 	reg_mon = 0;
     
+SELECT
+	*
+FROM
+	autos_cleaned;
+    
 #create a new column and put concatenated year and month in there
-
 
 ALTER TABLE autos_cleaned
 ADD COLUMN reg_date VARCHAR(25) AFTER reg_mon;
 
+CREATE TABLE test
+SELECT
+	id,
+	CONCAT(reg_year,'-',reg_mon) AS whatever
+FROM
+	autos_cleaned;
 #turn the column into a date type
+
+SELECT
+	id,
+    brand,
+    model,
+    vehicle_name,
+    vehicle_type,
+    gearbox,
+    horsepower,
+    seller,
+    price,
+    fuel_type,
+    kilometrage,
+    present_damage,
+    CONCAT(reg_year,'-',reg_mon) AS reg_date,
+    date_created,
+    date_crawled,
+    last_seen
+FROM
+	autos_cleaned;
 
 UPDATE autos_cleaned
 SET reg_date = STR_TO_DATE(reg_date,'%Y-%c');
@@ -483,3 +465,5 @@ SELECT
 	*
 FROM
 	autos_cleaned;
+    
+    
