@@ -4,26 +4,21 @@ library(tidytext)
 #Load up the csv file
 autos <- read.csv("autos.csv")
 
-#and file that contains brand names
-auto_brands <- read.csv("auto_brands.csv")
+unique(autos$brand)
 
+#and file that contains brand names
+brands_list <- read.csv("auto_brands.csv")
 
 #there are a few model names that don't tell much about the car, 
-#e.g. 'andere', '3er' or simply missing values 
+#e.g. 'andere', or simply missing values 
 #I can try and use `names` column to derive more legible model names
 
-#get rid of hyphens in some names e.g lorraine-dietrich 
-#insert the new values into  field brand_new
-
-auto_brands$brand_new <- gsub("-"," ",auto_brands$Brand)
-
-#use unnest tokens to place every word in its own row
-auto_brands<- auto_brands %>% 
-  unnest_tokens(output = brand_word,
-                input = brand_new)
-
 #create a list of brand names
-brands <- auto_brands$brand_word
+brands_list$brand <- gsub("-", " ",brands_list$brand)
+brands_list<- brands_list %>% 
+  unnest_tokens(output = brand_word,
+                input = brand)
+brands <- brands_list$brand
 
 #add a few possible ways to spell some brands
 brands <- c("vw",
@@ -36,39 +31,7 @@ brands <- c("vw",
 unique(autos$model)
 
 models_to_filter <- c("",
-                      "3er",
-                      "2_reihe",
-                      "andere",
-                      "3_reihe",
-                      "a_klasse",
-                      "e_klasse",
-                      "b_klasse",
-                      "c_klasse",
-                      "m_klasse",
-                      "s_klasse",
-                      "5er",
-                      "1er",
-                      "xc_reihe",
-                      "7er",
-                      "z_reihe",
-                      "i_reihe",
-                      "6_reihe",
-                      "5_reihe",
-                      "rx_reihe",
-                      "6er",
-                      "x_reihe",
-                      "1_reihe",
-                      "4_reihe",
-                      "mx_reihe",
-                      "m_reihe",
-                      "cr_reihe",
-                      "c_reihe",
-                      "v_klasse",
-                      "x_type",
-                      "cx_reihe",
-                      "g_klasse",
-                      "serie_3",
-                      "serie_1")
+                      "andere")
 
 
 #create a subset with rows that have these unclear/unknown values in the `model` column
@@ -97,25 +60,6 @@ autos_subset_tidy <- autos_subset %>%
   select(index,model=names_word)
 
 autos<-autos_subset_tidy %>% 
-  full_join(autos, by = "index", suffix = c('','.1')) %>% 
-  mutate(model = coalesce(model, model.1)) %>% 
-  select(-model.1)
-
-#mercedes tend to use letter and number to indicate model e.g E 120, 
-#so unless I pull up first two words I am going to get only a letter which 
-#indicates the class and not the model and isn't very informative
-#create a subset for mercedes cars only
-#after that I can concatenate the rows for each vehicle together 
-
-mercedes <- autos_subset %>%
-  filter(brand == "mercedes_benz") %>%
-  group_by(index) %>% 
-  slice(1,2) %>% 
-  mutate(model_new = paste(names_word, collapse = " ")) %>% 
-  slice(1) %>% 
-  select(index, model=model_new)
-
-autos<-mercedes %>% 
   full_join(autos, by = "index", suffix = c('','.1')) %>% 
   mutate(model = coalesce(model, model.1)) %>% 
   select(-model.1)
@@ -171,17 +115,32 @@ autos<-sonstige %>%
   select(-brand.1,-model.1)
 
 
-#let's look at the values in the brand column, it can be eaasily seen 
-#that unfortunately there are quite a lot of words that were used in the name 
-#column but don't make much sense e.g freisprecheinrichtung or gaaaaanz
-#so i am going to utilize `brand` vector once again to make sure only rows with 
-#legit brand names are present
+#let's look at the values in the brand column 
 
 unique(autos$brand)
 
-autos <- autos %>% 
-  filter(brand %in% brands)
 
+#it can be easily seen that unfortunately there are quite a lot of words that were used in the name 
+#column but don't make much sense e.g freisprecheinrichtung or gaaaaanz
+#so i am going to utilize `auto_brands` file once again to make sure only rows with 
+#legit brand names are present
+
+auto_brands <- read.csv("auto_brands.csv")
+auto_brands$brand <- gsub("-", " ",auto_brands$brand)
+auto_brands$brand <- gsub(" ", "_",auto_brands$brand)
+auto_brands$brand <- tolower(auto_brands$brand)
+legit_brands <- auto_brands$brand
+legit_brands <- c("vw",
+            "moskvich",
+            "luaz",
+            legit_brands)
+
+
+
+autos <- autos %>% 
+  filter(brand %in% legit_brands)
+
+unique(autos$brand)
 
 #while we're at it I can also clean up the dates and bring them into more 
 #appropriate format YYYY-MM-DD and get rid of the times as they're not that important
