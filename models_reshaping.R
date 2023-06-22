@@ -151,7 +151,7 @@ autos <- autos %>%
          lastSeennew = strptime(lastSeen,"%Y-%m-%d")) %>% 
   select(!c(dateCrawled, dateCreated, lastSeen))
 
-write.csv(autos,"autos_cleaned.csv")
+write.csv(autos,"autos_cleaned_r.csv")
 
 
 
