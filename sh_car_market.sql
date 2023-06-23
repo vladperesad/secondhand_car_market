@@ -207,7 +207,9 @@ FROM
 #600 is the average maximum that civilian cars are capable of, so lets take a look of what vehicles are represented in the group 600+
 
 SELECT
-	*
+	brand,
+    model,
+    horsepower
 FROM
 	autos_work
 WHERE
@@ -309,26 +311,35 @@ MODIFY present_damage TINYINT(1);
 DELETE FROM autos_work
 WHERE present_damage IS NULL;
     
--------------------------------#get back to prices
+#get back to prices
+
+#looking at european websites with sencod hand cars revealed that prices for damaged cars tend to start from 300 euros up, 
+#while for cars that don't have damage the prices start at arount 500 euros
+
+
 
 DELETE FROM
-	autos_cleaned
+	autos_work
 WHERE
-	price <100
-ORDER BY price;
+	price <300 AND present_damage = 1;
+    
+DELETE FROM
+	autos_work
+WHERE
+	price <500 AND present_damage =0;
 
 #seller
 
 SELECT
 	DISTINCT(seller)
 FROM
-	autos_cleaned;
+	autos_work;
     
-UPDATE autos_cleaned
+UPDATE autos_work
 SET seller = 'private'
 WHERE seller = 'privat';
     
-UPDATE autos_cleaned
+UPDATE autos_work
 SET seller = 'commercial'
 WHERE seller = 'gewerblich';
 
@@ -337,31 +348,32 @@ WHERE seller = 'gewerblich';
 SELECT
 	DISTINCT(fuel_type)
 FROM
-	autos_cleaned;
+	autos_work;
     
-UPDATE autos_cleaned 
+UPDATE autos_work 
 SET fuel_type = 'gasoline'
 WHERE fuel_type = 'benzin';
 
-UPDATE autos_cleaned
+UPDATE autos_work
 SET fuel_type = 'other'
 WHERE fuel_type = 'andere';
 
-UPDATE autos_cleaned
+UPDATE autos_work
 SET fuel_type = 'electric'
 WHERE fuel_type = 'elektro';
 
-UPDATE autos_cleaned
+UPDATE autos_work
 SET fuel_type = NULL
 WHERE fuel_type = '';
 
-#pull up min and max values in mileage column    
+#pull up min and max values in kilometrage column    
 SELECT
 	MIN(kilometrage),
     MAX(kilometrage)
 FROM
-	autos_cleaned;
-#the min and max mileages seem to make sense
+	autos_work;
+    
+#the min and max values seem to make sense
 
 #finally take a look at the year and month of registration
 
@@ -369,11 +381,12 @@ SELECT
 	MAX(reg_year),
     MIN(reg_year)
 FROM
-	autos_cleaned;
-#while 1910 is technically possible, anything after 2019 is not
+	autos_work;
+    
+#while 1910 is technically possible, anything after 2019 is not 
 #clean up any value larger than 2019 and take a closer look at cars before 1950
 
-DELETE FROM autos_cleaned
+DELETE FROM autos_work
 WHERE reg_year > 2019;
 
 SELECT
@@ -383,7 +396,7 @@ SELECT
     horsepower,
     reg_year
 FROM
-	autos_cleaned
+	autos_work
 WHERE
 	reg_year < 1930
 ORDER BY reg_year;
@@ -391,79 +404,72 @@ ORDER BY reg_year;
 #the only car that doesn't fit is a vw beetle with TDI angine that produces 90hp, not only because in 1910
 #there wasn't such a thing as TDI, and hp of 90 was unheard of for 1.9 litre engine but also because first wv beetle was made in 1965 
 
-DELETE FROM autos_cleaned
-WHERE reg_year <1923;
+DELETE FROM autos_work
+WHERE reg_year <1928;
 
 #let's look at the months avaliable 
 
 SELECT
 	DISTINCT(reg_mon)
 FROM
-	autos_cleaned
+	autos_work
 ORDER BY 
 	reg_mon;
 
 #get rid of the 0 months
 
 DELETE FROM
-	autos_cleaned
+	autos_work
 WHERE
 	reg_mon = 0;
     
 SELECT
 	*
 FROM
-	autos_cleaned;
+	autos_work;
     
 #create a new column and put concatenated year and month in there
 
-ALTER TABLE autos_cleaned
-ADD COLUMN reg_date VARCHAR(25) AFTER reg_mon;
-
-CREATE TABLE test
-SELECT
-	id,
-	CONCAT(reg_year,'-',reg_mon) AS whatever
-FROM
-	autos_cleaned;
-#turn the column into a date type
-
+DROP TABLE IF EXISTS autos_cleaned_sql;
+CREATE TABLE autos_cleaned_sql
 SELECT
 	id,
     brand,
     model,
-    vehicle_name,
     vehicle_type,
     gearbox,
     horsepower,
-    seller,
     price,
     fuel_type,
     kilometrage,
     present_damage,
     CONCAT(reg_year,'-',reg_mon) AS reg_date,
     date_created,
-    date_crawled,
     last_seen
 FROM
-	autos_cleaned;
+	autos_work;
 
-UPDATE autos_cleaned
-SET reg_date = STR_TO_DATE(reg_date,'%Y-%c');
+UPDATE autos_cleaned_sql
+SET reg_date = STR_TO_DATE(reg_date,'%Y-%m');
 
-#clean up unused columns    
-ALTER TABLE autos_cleaned
-DROP COLUMN reg_year,
-DROP COLUMN reg_mon;
-        
-ALTER TABLE autos_cleaned
-CHANGE COLUMN date_created_2 date_created DATE,
-CHANGE COLUMN date_crawled_2 date_crawled DATE,
-CHANGE COLUMN last_seen_2 last_seen DATE;
+ALTER TABLE autos_cleaned_sql
+CHANGE COLUMN reg_date date_reg DATE;
+
+
+UPDATE autos_cleaned_sql
+SET date_reg = date_format(date_reg,'%Y-%m-01');
+
 
 SELECT
 	*
 FROM
-	autos_cleaned;
+	autos_cleaned_sql;
     
+SELECT
+	*,
+	datediff(last_seen,date_reg) AS car_age_days,
+    datediff(last_seen,date_created) AS for_sale_days
+FROM
+	autos_cleaned_sql;
     
+
