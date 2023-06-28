@@ -467,9 +467,9 @@ FROM
     
 SELECT
 	*,
-	datediff(last_seen,date_reg) AS car_age_days,
+	datediff(date_created,date_reg) AS car_age_days,
     datediff(last_seen,date_created) AS for_sale_days
 FROM
 	autos_cleaned_sql;
     
-
+SHOW TABLES;
