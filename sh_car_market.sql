@@ -427,6 +427,18 @@ SELECT
 	*
 FROM
 	autos_work;
+
+#create a table that counts each brand
+
+DROP TABLE IF EXISTS count_of_brand;
+CREATE TABLE count_of_brand
+SELECT
+	brand,
+    COUNT(brand) AS brand_count
+FROM
+	autos_work
+GROUP BY brand
+ORDER BY COUNT(brand) DESC;
     
 #create a new column and put concatenated year and month in there
 
@@ -434,7 +446,7 @@ DROP TABLE IF EXISTS autos_cleaned_sql;
 CREATE TABLE autos_cleaned_sql
 SELECT
 	id,
-    brand,
+    aw.brand,
     model,
     vehicle_type,
     gearbox,
@@ -447,14 +459,16 @@ SELECT
     date_created,
     last_seen
 FROM
-	autos_work;
+	autos_work AS aw
+    INNER JOIN count_of_brand AS cob ON aw.brand = cob.brand
+WHERE
+	brand_count >100;
 
 UPDATE autos_cleaned_sql
 SET reg_date = STR_TO_DATE(reg_date,'%Y-%m');
 
 ALTER TABLE autos_cleaned_sql
 CHANGE COLUMN reg_date date_reg DATE;
-
 
 UPDATE autos_cleaned_sql
 SET date_reg = date_format(date_reg,'%Y-%m-01');
@@ -465,11 +479,12 @@ SELECT
 FROM
 	autos_cleaned_sql;
     
+
+    
 SELECT
 	*,
 	datediff(date_created,date_reg) AS car_age_days,
     datediff(last_seen,date_created) AS for_sale_days
+    
 FROM
 	autos_cleaned_sql;
-    
-SHOW TABLES;
