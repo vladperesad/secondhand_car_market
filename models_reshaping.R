@@ -4,8 +4,6 @@ library(tidytext)
 #Load up the csv file
 autos <- read.csv("autos.csv")
 
-unique(autos$brand)
-
 #and file that contains brand names
 brands_list <- read.csv("auto_brands.csv")
 
@@ -131,9 +129,9 @@ auto_brands$brand <- gsub(" ", "_",auto_brands$brand)
 auto_brands$brand <- tolower(auto_brands$brand)
 legit_brands <- auto_brands$brand
 legit_brands <- c("vw",
-            "moskvich",
-            "luaz",
-            legit_brands)
+                  "moskvich",
+                  "luaz",
+                  legit_brands)
 
 
 
