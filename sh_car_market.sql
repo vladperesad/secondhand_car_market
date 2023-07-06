@@ -1,4 +1,3 @@
-SHOW DATABASES;
 CREATE DATABASE secondhand_car_market;
 USE secondhand_car_market;
 
@@ -66,7 +65,9 @@ DESCRIBE autos;
 SELECT
 	*
 FROM
-	autos_cleaned_r;
+	autos_cleaned_r
+LIMIT 10;
+    
         
 #create a working copy of the table that contains only columns that are needed for the analysis
 
@@ -195,7 +196,6 @@ SET gearbox = NULL
 WHERE gearbox = '';
 
 #take a look at the horsepower values
-#in order to do that we need first to turn strings into numerical values
 
 SELECT
 	MAX(horsepower),
@@ -217,9 +217,9 @@ WHERE
 ORDER BY 
 	horsepower;
     
-# while Audi RS6 is definitely capable of producing 750 hp, fiat brava with 1.6 is definitely not
-# i am going to filter out records that have horsepower of above 600 hp AND brands that are not popular with producng high performance cars
-# such as ('volkswagen','skoda','peugeot','ford','renault','opel','seat','citroen','fiat','mini','smart',
+#while Audi RS6 is definitely capable of producing 750 hp, fiat brava with 1.6 is definitely not
+#i am going to filter out records that have horsepower of above 600 hp AND brands that are not popular with producng high performance cars
+#such as ('volkswagen','skoda','peugeot','ford','renault','opel','seat','citroen','fiat','mini','smart',
 #'hyundai','volvo','kia','suzuki','dacia','daihatsu','daewoo','rover','saab','trabant','lada')
 
 
@@ -343,6 +343,7 @@ UPDATE autos_work
 SET seller = 'commercial'
 WHERE seller = 'gewerblich';
 
+
 #take a look at the fuel coulumn
 
 SELECT
@@ -387,7 +388,7 @@ FROM
 #clean up any value larger than 2019 and take a closer look at cars before 1950
 
 DELETE FROM autos_work
-WHERE reg_year > 2019;
+WHERE reg_year > 2016;
 
 SELECT
 	brand,
@@ -439,6 +440,8 @@ FROM
 	autos_work
 GROUP BY brand
 ORDER BY COUNT(brand) DESC;
+
+---
     
 #create a new column and put concatenated year and month in there
 
