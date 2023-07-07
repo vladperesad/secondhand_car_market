@@ -441,7 +441,6 @@ FROM
 GROUP BY brand
 ORDER BY COUNT(brand) DESC;
 
----
     
 #create a new column and put concatenated year and month in there
 
