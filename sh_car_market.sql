@@ -153,7 +153,7 @@ FROM
 WHERE
 	vehicle_type = '' OR vehicle_type IS NULL;
     
-#since the body isn't that important and we have about 30k rows of missing data im just going to ingnore these missing values,
+#since the body isn't that important and we have about 36k rows of missing data im just going to ingnore these missing values,
 #but will translate the body types into English
 
 UPDATE autos_work
@@ -289,7 +289,7 @@ FROM
 WHERE
 	present_damage = '';
     
-#46044 rows with missing value for damage, but since it is an important information and there is no way 
+#47224 rows with missing value for damage, but since it is an important information and there is no way 
 #i can derive it from other columns, i'll simply have to delete it 
 #prior to that turn ja and nein into true and false
 
@@ -444,8 +444,8 @@ ORDER BY COUNT(brand) DESC;
     
 #create a new column and put concatenated year and month in there
 
-DROP TABLE IF EXISTS autos_cleaned_sql;
-CREATE TABLE autos_cleaned_sql
+DROP TABLE IF EXISTS reg_date_fixed;
+CREATE TABLE reg_date_fixed
 SELECT
 	id,
     aw.brand,
@@ -466,27 +466,35 @@ FROM
 WHERE
 	brand_count >100;
 
-UPDATE autos_cleaned_sql
+UPDATE reg_date_fixed
 SET reg_date = STR_TO_DATE(reg_date,'%Y-%m');
 
-ALTER TABLE autos_cleaned_sql
+ALTER TABLE reg_date_fixed
 CHANGE COLUMN reg_date date_reg DATE;
 
-UPDATE autos_cleaned_sql
+UPDATE reg_date_fixed
 SET date_reg = date_format(date_reg,'%Y-%m-01');
 
 
 SELECT
 	*
 FROM
-	autos_cleaned_sql;
+	reg_date_fixed;
     
-
-    
+DROP TABLE IF EXISTS autos_cleaned_sql;    
+CREATE TABLE autos_cleaned_sql
 SELECT
 	*,
 	datediff(date_created,date_reg) AS car_age_days,
     datediff(last_seen,date_created) AS for_sale_days
     
 FROM
-	autos_cleaned_sql;
+	reg_date_fixed;
+    
+SELECT
+	*
+FROM
+	autos_cleaned_sql
+WHERE
+	car_age_days >0
+ORDER BY car_age_days;
