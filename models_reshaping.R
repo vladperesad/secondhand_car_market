@@ -13,17 +13,16 @@ brands_list <- read.csv("auto_brands.csv")
 
 #create a list of brand names
 brands_list$brand <- gsub("-", " ",brands_list$brand)
-brands_list<- brands_list %>% 
+brands_list<- brands_list %>%
   unnest_tokens(output = brand_word,
-                input = brand)
-brands <- brands_list$brand
+                input = brand) 
+brands <- brands_list$brand_word
 
 #add a few possible ways to spell some brands
 brands <- c("vw",
             "moskvich",
             "luaz",
             brands)
-
 
 #create a list of models that are not particularly clear or unknown
 unique(autos$model)
